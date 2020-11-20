@@ -17,7 +17,11 @@ if (! function_exists('validate')) {
         }
 
         if ($type=="date"){
-        	return (DateTime::createFromFormat('Y-m-d H:i:s', $date) !== false);
+        	return (DateTime::createFromFormat('Y-m-d H:i:s', $str_input) !== false);
+        }
+
+        if ($type=="number"){
+            return is_numeric($str_input);
         }
 
     }

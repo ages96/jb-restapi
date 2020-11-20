@@ -62,8 +62,8 @@ return function (App $app) {
 
         $val_message = [];
 
-        if (validate("required",$id)==false){
-            $val_message["id"] = "required.";
+        if (validate("number",$id)==false){
+            $val_message["id"] = "must be number.";
         }
 
         if (validate("required",$first_name)==false){
@@ -82,17 +82,37 @@ return function (App $app) {
             $val_message["account"] = "required.";
         }
 
-        if (validate("company_id",$company_id)==false){
-            $val_message["company_id"] = "required.";
+        if (validate("number",$company_id)==false){
+            $val_message["company_id"] = "must be a number.";
         }
 
         if (count($val_message)>0){
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
-        $sql = "INSERT INTO user(first_name, last_name, email, account, company_id) 
-                VALUES(:first_name, :last_name, :email, :account, :company_id)";
+        $sql = "SELECT * FROM `user` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        if($mainCount>0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'user_id already exist.'],400);
+        }
+
+        $sql = "SELECT * FROM `company` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $company_id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $user = $stmt->fetchObject();
+        if($mainCount==0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'company_id not found.'],404);
+        }
+
+        $sql = "INSERT INTO user(id,first_name, last_name, email, account, company_id) 
+                VALUES(:id,:first_name, :last_name, :email, :account, :company_id)";
         $sth = $this->db->prepare($sql);
+        $sth->bindParam("id", $id);    
         $sth->bindParam("first_name", $first_name);             
         $sth->bindParam("last_name", $last_name);            
         $sth->bindParam("email", $email);                
@@ -187,21 +207,21 @@ return function (App $app) {
     //Get Budget Company
     $app->get("/getBudgetCompany", function (Request $request, Response $response, array $args){
         $input = $request->getParams();
-        $sql = "SELECT * FROM `company_budget` WHERE (id=:id)";
+        $sql = "SELECT company.name as company_name, company_budget.amount as company_budget_amount FROM `company` INNER JOIN company_budget ON company_budget.company_id = company_id WHERE (company.id=:id)";
         $stmt = $this->db->prepare($sql);
         $stmt->bindParam("id", $input['id']);
         $stmt->execute();
         $mainCount=$stmt->rowCount();
         $result = $stmt->fetchObject();
         if($mainCount==0) {
-            return $this->response->withJson(['status' => 'error', 'message' => 'no result data.'],404); 
+            return $this->response->withJson(['status' => 'error', 'message' => 'No result data based on that company id.'],404); 
         }
         return $response->withJson(["status" => "success", "data" => $result], 200);
     });
 
     //Get List Budget Company
     $app->get("/getListBudgetCompany", function (Request $request, Response $response, array $args){
-        $sql = "SELECT * FROM company_budget";
+        $sql = "SELECT company.name as company_name, company_budget.amount as company_budget_amount FROM `company` INNER JOIN company_budget ON company_budget.company_id = company_id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $mainCount=$stmt->rowCount();
@@ -214,7 +234,8 @@ return function (App $app) {
 
     //Get Log Transaction
     $app->get("/getLogTransaction", function (Request $request, Response $response, array $args){
-        $sql = "SELECT * FROM company";
+        $sql = "SELECT concat(user.first_name, ' ', user.last_name) as fullname, user.account as user_account, company.name as company_name, transaction.type as transaction_type, transaction.date as transaction_date, transaction.amount as transaction_amount, company_budget.amount as remaining_amount FROM user LEFT JOIN company on company.id = user.company_id INNER JOIN transaction ON transaction.user_id INNER JOIN company_budget ON company.id = company_budget.company_id ORDER BY transaction.date desc";
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $mainCount=$stmt->rowCount();
@@ -227,26 +248,55 @@ return function (App $app) {
 
     $app->post('/createCompany', function (Request $request, Response $response, array $args) {
         $input = $request->getParsedBody();
+        $budget = 1000000;
         $id=trim(strip_tags($input['id']));
         $name=trim(strip_tags($input['name']));
         $address=trim(strip_tags($input['address']));
+        $val_message = [];
+
+        if (validate("number",$id)==false){
+            $val_message["id"] = "must be number.";
+        }
+
+        if (validate("required",$name)==false){
+            $val_message["name"] = "required.";
+        }
+
+        if (validate("required",$address)==false){
+            $val_message["address"] = "required.";
+        }
+
+        if (count($val_message)>0){
+            return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
+        }
+        
         $sql = "INSERT INTO company(id, name, address) 
                 VALUES(:id, :name, :address)";
         $sth = $this->db->prepare($sql);
         $sth->bindParam("id", $id);             
         $sth->bindParam("name", $name);            
         $sth->bindParam("address", $address);
+        $sth->execute();
+
+        $sql = "INSERT INTO company_budget(id, company_id, amount) 
+                VALUES(:id, :company_id, :amount)";
+        $sth = $this->db->prepare($sql);
+        $sth->bindParam("id", $company_id);             
+        $sth->bindParam("company_id", $company_id);            
+        $sth->bindParam("amount", $budget);
         $StatusInsert=$sth->execute();
+
         if($StatusInsert){
             $IdUser=$this->db->lastInsertId();     
             $settings = $this->get('settings'); 
             $data=array(
-                'name'=> $name,
-                'address'=>$address
+                'company_name'=> $name,
+                'company_address'=> $address,
+                'company_budget'=> $budget
             );
             return $this->response->withJson(['status' => 'success','data'=>$data],200); 
         } else {
-            return $this->response->withJson(['status' => 'error','data'=>'error insert user.'],502); 
+            return $this->response->withJson(['status' => 'error','data'=>'error insert company.'],502); 
         }
     });
 
@@ -257,6 +307,69 @@ return function (App $app) {
         $user_id=trim(strip_tags($input['user_id']));
         $amount=trim(strip_tags($input['amount']));
         $date=trim(strip_tags($input['date']));
+        $val_message = [];
+
+        if (validate("number",$id)==false){
+            $val_message["id"] = "must be number.";
+        }
+
+        if (validate("number",$user_id)==false){
+            $val_message["user_id"] = "must be number.";
+        }
+
+        if (validate("number",$amount)==false){
+            $val_message["amount"] = "must be number.";
+        }
+
+        if (validate("date",$date)==false){
+            $val_message["date"] = "Invalid format, it should be 'Y-m-d H:i:s' (1996-12-29 00:00:00).";
+        }
+
+        if (count($val_message)>0){
+            return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
+        }
+
+        $sql = "SELECT * FROM `transaction` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        if($mainCount>0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'id transaction already exist.'],404);
+        }
+
+        $sql = "SELECT * FROM `user` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $user_id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $user = $stmt->fetchObject();
+        if($mainCount==0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'user_id not found.'],404);
+        }
+
+        $sql = "SELECT * FROM `company_budget` WHERE company_id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $user->company_id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $budget_cp=$stmt->fetchObject();
+        if($mainCount>0) {
+            $budget_cp=$budget_cp->amount;
+            if ($amount>$budget_cp){
+                  return $this->response->withJson(['status' => 'error', 'message' => 'Amount exceeded.'],404);  
+            } else {
+                $substract = $budget_cp - $amount;
+                $sql = "UPDATE company_budget SET amount=:amount WHERE company_id=:company_id";
+                $sth = $this->db->prepare($sql);
+                $sth->bindParam("company_id", $user->company_id);             
+                $sth->bindParam("amount", $substract);
+                $StatusUpdate=$sth->execute();
+            }
+        } else {
+            return $this->response->withJson(['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company'],404);
+        }
+
         $sql = "INSERT INTO transaction(id, type, user_id, amount, date) 
                 VALUES(:id, :type, :user_id, :amount, :date)";
         $sth = $this->db->prepare($sql);
@@ -282,6 +395,69 @@ return function (App $app) {
         $user_id=trim(strip_tags($input['user_id']));
         $amount=trim(strip_tags($input['amount']));
         $date=trim(strip_tags($input['date']));
+        $val_message = [];
+
+        if (validate("number",$id)==false){
+            $val_message["id"] = "must be number.";
+        }
+
+        if (validate("number",$user_id)==false){
+            $val_message["user_id"] = "must be number.";
+        }
+
+        if (validate("number",$amount)==false){
+            $val_message["amount"] = "must be number.";
+        }
+
+        if (validate("date",$date)==false){
+            $val_message["date"] = "Invalid format, it should be 'Y-m-d H:i:s' (1996-12-29 00:00:00).";
+        }
+
+        if (count($val_message)>0){
+            return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
+        }
+
+        $sql = "SELECT * FROM `transaction` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        if($mainCount>0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'id transaction already exist.'],404);
+        }
+
+        $sql = "SELECT * FROM `user` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $user_id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $user = $stmt->fetchObject();
+        if($mainCount==0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'user_id not found.'],404);
+        }
+
+        $sql = "SELECT * FROM `company_budget` WHERE company_id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $user->company_id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $budget_cp=$stmt->fetchObject();
+        if($mainCount>0) {
+            $budget_cp=$budget_cp->amount;
+            if ($amount>$budget_cp){
+                  return $this->response->withJson(['status' => 'error', 'message' => 'Amount exceeded.'],404);  
+            } else {
+                $substract = $budget_cp - $amount;
+                $sql = "UPDATE company_budget SET amount=:amount WHERE company_id=:company_id";
+                $sth = $this->db->prepare($sql);
+                $sth->bindParam("company_id", $user->company_id);             
+                $sth->bindParam("amount", $substract);
+                $StatusUpdate=$sth->execute();
+            }
+        } else {
+            return $this->response->withJson(['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company'],404);
+        }
+
         $sql = "INSERT INTO transaction(id, type, user_id, amount, date) 
                 VALUES(:id, :type, :user_id, :amount, :date)";
         $sth = $this->db->prepare($sql);
@@ -307,6 +483,65 @@ return function (App $app) {
         $user_id=trim(strip_tags($input['user_id']));
         $amount=trim(strip_tags($input['amount']));
         $date=trim(strip_tags($input['date']));
+        $val_message = [];
+
+        if (validate("number",$id)==false){
+            $val_message["id"] = "must be number.";
+        }
+
+        if (validate("number",$user_id)==false){
+            $val_message["user_id"] = "must be number.";
+        }
+
+        if (validate("number",$amount)==false){
+            $val_message["amount"] = "must be number.";
+        }
+
+        if (validate("date",$date)==false){
+            $val_message["date"] = "Invalid format, it should be 'Y-m-d H:i:s' (1996-12-29 00:00:00).";
+        }
+
+        if (count($val_message)>0){
+            return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
+        }
+
+        $sql = "SELECT * FROM `transaction` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        if($mainCount>0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'id transaction already exist.'],404);
+        }
+
+        $sql = "SELECT * FROM `user` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $user_id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $user = $stmt->fetchObject();
+        if($mainCount==0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'user_id not found.'],404);
+        }
+
+        $sql = "SELECT * FROM `company_budget` WHERE company_id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $user->company_id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $budget_cp=$stmt->fetchObject();
+        if($mainCount>0) {
+            $budget_cp=$budget_cp->amount;
+            $addition = $budget_cp + $amount;
+            $sql = "UPDATE company_budget SET amount=:amount WHERE company_id=:company_id";
+            $sth = $this->db->prepare($sql);
+            $sth->bindParam("company_id", $user->company_id);             
+            $sth->bindParam("amount", $addition);
+            $StatusUpdate=$sth->execute();
+        } else {
+            return $this->response->withJson(['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company'],404);
+        }
+
         $sql = "INSERT INTO transaction(id, type, user_id, amount, date) 
                 VALUES(:id, :type, :user_id, :amount, :date)";
         $sth = $this->db->prepare($sql);
@@ -331,6 +566,34 @@ return function (App $app) {
         $id=trim(strip_tags($input['id']));
         $name=trim(strip_tags($input['name']));
         $address=trim(strip_tags($input['address']));
+        $val_message = [];
+
+        if (validate("number",$id)==false){
+            $val_message["id"] = "Must be a number.";
+        }
+
+        if (validate("required",$name)==false){
+            $val_message["name"] = "required.";
+        }
+
+        if (validate("required",$address)==false){
+            $val_message["address"] = "required.";
+        }
+
+        if (count($val_message)>0){
+            return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
+        }
+
+        $sql = "SELECT * FROM `company` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $user = $stmt->fetchObject();
+        if($mainCount==0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'id company not found.'],404);
+        }
+
         $sql = "UPDATE company SET name=:name, address=:address WHERE id=:id";
         $sth = $this->db->prepare($sql);
         $sth->bindParam("id", $id);             
@@ -350,6 +613,33 @@ return function (App $app) {
         $id=trim(strip_tags($input['id']));
         $first_name=trim(strip_tags($input['first_name']));
         $last_name=trim(strip_tags($input['last_name']));
+
+        if (validate("number",$id)==false){
+            $val_message["id"] = "must be a number.";
+        }
+
+        if (validate("required",$first_name)==false){
+            $val_message["first_name"] = "required.";
+        }
+
+        if (validate("required",$last_name)==false){
+            $val_message["last_name"] = "required.";
+        }
+
+        if (count($val_message)>0){
+            return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
+        }
+
+        $sql = "SELECT * FROM `user` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $user = $stmt->fetchObject();
+        if($mainCount==0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'id user not found.'],404);
+        }
+
         $sql = "UPDATE user SET first_name=:first_name, last_name=:last_name WHERE id=:id";
         $sth = $this->db->prepare($sql);
         $sth->bindParam("id", $id);             
@@ -357,9 +647,9 @@ return function (App $app) {
         $sth->bindParam("last_name", $last_name);
         $StatusUpdate=$sth->execute();
         if($StatusUpdate){
-            return $this->response->withJson(['status' => 'success','data'=>'success update produk.'],202); 
+            return $this->response->withJson(['status' => 'success','data'=>'success update user.'],202); 
         } else {
-            return $this->response->withJson(['status' => 'error','data'=>'error update produk.'],502); 
+            return $this->response->withJson(['status' => 'error','data'=>'error update user.'],502); 
         }
     });
 
@@ -367,6 +657,31 @@ return function (App $app) {
     $app->delete('/deleteCompany', function (Request $request, Response $response, array $args) {
         $args = $request->getParsedBody();
         $id = trim(strip_tags($args["id"]));
+        $val_message = [];
+
+        if (validate("number",$id)==false){
+            $val_message["id"] = "Must be a number.";
+        }
+
+        if (count($val_message)>0){
+            return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
+        }
+
+        $sql = "SELECT * FROM `company` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $user = $stmt->fetchObject();
+        if($mainCount==0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'id company not found.'],404);
+        }
+
+        $sql = "DELETE FROM company_budget WHERE company_id=:id";
+        $sth = $this->db->prepare($sql);
+        $sth->bindParam("id", $id);    
+        $StatusDelete=$sth->execute();
+
         $sql = "DELETE FROM company WHERE id=:id";
         $sth = $this->db->prepare($sql);
         $sth->bindParam("id", $id);    
@@ -382,6 +697,26 @@ return function (App $app) {
     $app->post('/deleteUser', function (Request $request, Response $response, array $args) {
         $args = $request->getParsedBody();
         $id = trim(strip_tags($args["id"]));
+        $val_message = [];
+
+        if (validate("number",$id)==false){
+            $val_message["id"] = "Must be a number.";
+        }
+
+        if (count($val_message)>0){
+            return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
+        }
+
+        $sql = "SELECT * FROM `user` WHERE id=:id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("id", $id);
+        $stmt->execute();
+        $mainCount=$stmt->rowCount();
+        $user = $stmt->fetchObject();
+        if($mainCount==0) {
+            return $this->response->withJson(['status' => 'error', 'message' => 'id user not found.'],404);
+        }
+
         $sql = "DELETE FROM user WHERE id=:id";
         $sth = $this->db->prepare($sql);
         $sth->bindParam("id", $id);    
@@ -392,5 +727,5 @@ return function (App $app) {
             return $this->response->withJson(['status' => 'error','data'=>'error delete user.'],502); 
         }
     });
-    
+
 };
