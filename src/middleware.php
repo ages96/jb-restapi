@@ -10,7 +10,7 @@ return function (App $app) {
         "path" => "/api", /* or ["/api", "/admin"] */
         "secure" => false,
         "attribute" => "decoded_token_data",
-        "secret" => "supersecretkeyyoushouldnotcommittogithub",
+        "secret" => "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
         "algorithm" => ["HS256"],
         "error" => function ($req, $res, $args) {
         $data["status"] = "error";
@@ -19,5 +19,5 @@ return function (App $app) {
         ->withHeader("Content-Type", "application/json")
         ->write(json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
         }
-        ]));
+    ]));
 };
