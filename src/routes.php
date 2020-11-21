@@ -32,6 +32,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -41,6 +46,11 @@ return function (App $app) {
         $sth->execute();
         $user = $sth->fetchObject();       
         if(!$user) {
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'error', 'message' => 'These credentials do not match our records username.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'These credentials do not match our records username.'],400);  
         }
         $settings = $this->get('settings');       
@@ -48,6 +58,11 @@ return function (App $app) {
             'email' =>  $user->email
         );
         $token = JWT::encode($token, $settings['jwt']['secret'], "HS256");
+        $log = [
+            "request"=>$input,
+            "response"=>['status' => 'success','data'=>$user, 'token' => $token]
+        ];
+        $this->logger->info(json_encode($log));
         return $this->response->withJson(['status' => 'success','data'=>$user, 'token' => $token],200); 
     });
 
@@ -87,6 +102,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -96,6 +116,11 @@ return function (App $app) {
         $stmt->execute();
         $mainCount=$stmt->rowCount();
         if($mainCount>0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'user_id already exist.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'user_id already exist.'],400);
         }
 
@@ -106,6 +131,11 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $user = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'company_id not found.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'company_id not found.'],404);
         }
 
@@ -129,8 +159,18 @@ return function (App $app) {
             $dataUser=array(
                 'email'=> $email
             );
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'success','data'=>$dataUser, 'token'=>$token]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'success','data'=>$dataUser, 'token'=>$token],200); 
         } else {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error','data'=>'error insert user.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error','data'=>'error insert user.'],502); 
         }
     });
@@ -147,6 +187,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -158,21 +203,42 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $result = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'no result data.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'no result data.'],404); 
         }
+            $log = [
+                "request"=>$input,
+                 "response"=>["status" => "success", "data" => $result]
+            ];
+            $this->logger->info(json_encode($log));
         return $response->withJson(["status" => "success", "data" => $result], 200);
     });
 
     //Get All User
     $app->get("/getListUser", function (Request $request, Response $response, array $args){
+        $input = $request->getParams();
         $sql = "SELECT * FROM user";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $mainCount=$stmt->rowCount();
         $result = $stmt->fetchAll();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'no result data.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'no result data.'],404); 
         }
+            $log = [
+                "request"=>$input,
+                 "response"=>["status" => "success", "data" => $result]
+            ];
+            $this->logger->info(json_encode($log));
         return $response->withJson(["status" => "success", "data" => $result], 200);
     });
 
@@ -186,21 +252,42 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $result = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'no result data.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'no result data.'],404); 
         }
+            $log = [
+                "request"=>$input,
+                 "response"=>["status" => "success", "data" => $result]
+            ];
+            $this->logger->info(json_encode($log));
         return $response->withJson(["status" => "success", "data" => $result], 200);
     });
 
     //Get All Company
     $app->get("/getListCompany", function (Request $request, Response $response, array $args){
+        $input = $request->getParams();
         $sql = "SELECT * FROM company";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $mainCount=$stmt->rowCount();
         $result = $stmt->fetchAll();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'no result data.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'no result data.'],404); 
         }
+            $log = [
+                "request"=>$input,
+                 "response"=>["status" => "success", "data" => $result]
+            ];
+            $this->logger->info(json_encode($log));
         return $response->withJson(["status" => "success", "data" => $result], 200);
     });
 
@@ -214,26 +301,48 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $result = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'No result data based on that company id.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'No result data based on that company id.'],404); 
         }
+            $log = [
+                "request"=>$input,
+                 "response"=>["status" => "success", "data" => $result]
+            ];
+            $this->logger->info(json_encode($log));
         return $response->withJson(["status" => "success", "data" => $result], 200);
     });
 
     //Get List Budget Company
     $app->get("/getListBudgetCompany", function (Request $request, Response $response, array $args){
+        $input = $request->getParams();
         $sql = "SELECT company.name as company_name, company_budget.amount as company_budget_amount FROM `company` INNER JOIN company_budget ON company_budget.company_id = company_id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $mainCount=$stmt->rowCount();
         $result = $stmt->fetchAll();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'no result data.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'no result data.'],404); 
         }
+            $log = [
+                "request"=>$input,
+                 "response"=>["status" => "success", "data" => $result]
+            ];
+            $this->logger->info(json_encode($log));
         return $response->withJson(["status" => "success", "data" => $result], 200);
     });
 
     //Get Log Transaction
     $app->get("/getLogTransaction", function (Request $request, Response $response, array $args){
+        $input = $request->getParams();
         $sql = "SELECT concat(user.first_name, ' ', user.last_name) as fullname, user.account as user_account, company.name as company_name, transaction.type as transaction_type, transaction.date as transaction_date, transaction.amount as transaction_amount, company_budget.amount as remaining_amount FROM user LEFT JOIN company on company.id = user.company_id INNER JOIN transaction ON transaction.user_id INNER JOIN company_budget ON company.id = company_budget.company_id ORDER BY transaction.date desc";
 
         $stmt = $this->db->prepare($sql);
@@ -241,8 +350,18 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $result = $stmt->fetchAll();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'no result data.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'no result data.'],404); 
         }
+            $log = [
+                "request"=>$input,
+                 "response"=>["status" => "success", "data" => $result]
+            ];
+            $this->logger->info(json_encode($log));
         return $response->withJson(["status" => "success", "data" => $result], 200);
     });
 
@@ -267,6 +386,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
         
@@ -294,8 +418,18 @@ return function (App $app) {
                 'company_address'=> $address,
                 'company_budget'=> $budget
             );
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'success','data'=>$data]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'success','data'=>$data],200); 
         } else {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error','data'=>'error insert company.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error','data'=>'error insert company.'],502); 
         }
     });
@@ -326,6 +460,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -335,6 +474,11 @@ return function (App $app) {
         $stmt->execute();
         $mainCount=$stmt->rowCount();
         if($mainCount>0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'id transaction already exist.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'id transaction already exist.'],404);
         }
 
@@ -345,6 +489,11 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $user = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'user_id not found.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'user_id not found.'],404);
         }
 
@@ -367,6 +516,11 @@ return function (App $app) {
                 $StatusUpdate=$sth->execute();
             }
         } else {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company'],404);
         }
 
@@ -381,9 +535,19 @@ return function (App $app) {
         $StatusInsert=$sth->execute();
         if($StatusInsert){
             $IdUser=$this->db->lastInsertId();     
-            $settings = $this->get('settings'); 
+            $settings = $this->get('settings');
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'success','data'=>(object)null]
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'success','data'=>(object)null],200); 
         } else {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error','data'=>'error insert user.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error','data'=>'error insert user.'],502); 
         }
     });
@@ -414,6 +578,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -423,6 +592,11 @@ return function (App $app) {
         $stmt->execute();
         $mainCount=$stmt->rowCount();
         if($mainCount>0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'id transaction already exist.']
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'error', 'message' => 'id transaction already exist.'],404);
         }
 
@@ -433,6 +607,11 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $user = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'user_id not found.']
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'error', 'message' => 'user_id not found.'],404);
         }
 
@@ -445,7 +624,12 @@ return function (App $app) {
         if($mainCount>0) {
             $budget_cp=$budget_cp->amount;
             if ($amount>$budget_cp){
-                  return $this->response->withJson(['status' => 'error', 'message' => 'Amount exceeded.'],404);  
+                $log = [
+                    "request"=>$input,
+                     "response"=>['status' => 'error', 'message' => 'Amount exceeded.']
+                ];
+                $this->logger->info(json_encode($log)); 
+                return $this->response->withJson(['status' => 'error', 'message' => 'Amount exceeded.'],404);  
             } else {
                 $substract = $budget_cp - $amount;
                 $sql = "UPDATE company_budget SET amount=:amount WHERE company_id=:company_id";
@@ -455,6 +639,11 @@ return function (App $app) {
                 $StatusUpdate=$sth->execute();
             }
         } else {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company']
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company'],404);
         }
 
@@ -469,7 +658,12 @@ return function (App $app) {
         $StatusInsert=$sth->execute();
         if($StatusInsert){
             $IdUser=$this->db->lastInsertId();     
-            $settings = $this->get('settings'); 
+            $settings = $this->get('settings');
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'success','data'=>(object)null]
+            ];
+            $this->logger->info(json_encode($log));  
             return $this->response->withJson(['status' => 'success','data'=>(object)null],200); 
         } else {
             return $this->response->withJson(['status' => 'error','data'=>'error insert user.'],502); 
@@ -502,6 +696,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));  
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -511,6 +710,11 @@ return function (App $app) {
         $stmt->execute();
         $mainCount=$stmt->rowCount();
         if($mainCount>0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'id transaction already exist.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'id transaction already exist.'],404);
         }
 
@@ -521,6 +725,11 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $user = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'user_id not found.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'user_id not found.'],404);
         }
 
@@ -539,6 +748,11 @@ return function (App $app) {
             $sth->bindParam("amount", $addition);
             $StatusUpdate=$sth->execute();
         } else {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company']
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'error', 'message' => 'There is no company budget for this user company. Please add the data company budget first for this user company'],404);
         }
 
@@ -553,9 +767,19 @@ return function (App $app) {
         $StatusInsert=$sth->execute();
         if($StatusInsert){
             $IdUser=$this->db->lastInsertId();     
-            $settings = $this->get('settings'); 
+            $settings = $this->get('settings');
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'success','data'=>(object)null]
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'success','data'=>(object)null],200); 
         } else {
+            $log = [
+                "request"=>$input,
+                 "response"=>['status' => 'error','data'=>'error insert user.']
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'error','data'=>'error insert user.'],502); 
         }
     });
@@ -581,6 +805,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -591,6 +820,11 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $user = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'error', 'message' => 'id company not found.']
+            ];
+            $this->logger->info(json_encode($log)); 
             return $this->response->withJson(['status' => 'error', 'message' => 'id company not found.'],404);
         }
 
@@ -601,8 +835,18 @@ return function (App $app) {
         $sth->bindParam("address", $address);
         $StatusUpdate=$sth->execute();
         if($StatusUpdate){
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'success','data'=>'success update company.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'success','data'=>'success update company.'],202); 
         } else {
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'error','data'=>'error update company.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error','data'=>'error update company.'],502); 
         }
     });
@@ -627,6 +871,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -637,6 +886,11 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $user = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'error', 'message' => 'id user not found.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'id user not found.'],404);
         }
 
@@ -647,8 +901,18 @@ return function (App $app) {
         $sth->bindParam("last_name", $last_name);
         $StatusUpdate=$sth->execute();
         if($StatusUpdate){
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'success','data'=>'success update user.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'success','data'=>'success update user.'],202); 
         } else {
+            $log = [
+                "request"=>$input,
+                "response"=>['status' => 'error','data'=>'error update user.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error','data'=>'error update user.'],502); 
         }
     });
@@ -664,6 +928,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$args,
+                "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -674,6 +943,11 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $user = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$args,
+                "response"=>['status' => 'error', 'message' => 'id company not found.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'id company not found.'],404);
         }
 
@@ -687,8 +961,18 @@ return function (App $app) {
         $sth->bindParam("id", $id);    
         $StatusDelete=$sth->execute();
         if($StatusDelete){
+            $log = [
+                "request"=>$args,
+                "response"=>['status' => 'success','data'=>'success delete company.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'success','data'=>'success delete company.'],202); 
         } else {
+            $log = [
+                "request"=>$args,
+                "response"=>['status' => 'error','data'=>'error delete company.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error','data'=>'error delete company.'],502); 
         }
     });
@@ -704,6 +988,11 @@ return function (App $app) {
         }
 
         if (count($val_message)>0){
+            $log = [
+                "request"=>$args,
+                "response"=>['status' => 'failed','message'=>$val_message]
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'failed','message'=>$val_message],400); 
         }
 
@@ -714,6 +1003,11 @@ return function (App $app) {
         $mainCount=$stmt->rowCount();
         $user = $stmt->fetchObject();
         if($mainCount==0) {
+            $log = [
+                "request"=>$args,
+                "response"=>['status' => 'error', 'message' => 'id user not found.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error', 'message' => 'id user not found.'],404);
         }
 
@@ -722,8 +1016,18 @@ return function (App $app) {
         $sth->bindParam("id", $id);    
         $StatusDelete=$sth->execute();
         if($StatusDelete){
+            $log = [
+                "request"=>$args,
+                "response"=>['status' => 'success','data'=>'success delete user.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'success','data'=>'success delete user.'],202); 
         } else {
+            $log = [
+                "request"=>$args,
+                "response"=>['status' => 'error','data'=>'error delete user.']
+            ];
+            $this->logger->info(json_encode($log));
             return $this->response->withJson(['status' => 'error','data'=>'error delete user.'],502); 
         }
     });
